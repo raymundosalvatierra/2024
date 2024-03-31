@@ -1,0 +1,199 @@
+%TRABAJO PRACTICO N1
+%PROFESOR: Julian Pucheta
+%Alumno: Herman Raymundo Salvatierra
+%Caso de estudio 1
+
+%Sistema de 2 variables
+%Ejercicio 2 y 3
+%En el archivo Curvas_Medidas_RLC.xls (datos en la hoja 1 y etiquetas en la
+%hoja 2) estan las series de datos que sirven para deducir los valores de R
+%L C del circuito. Emplear el metodo de la respuesta al escalon, tomando
+%como salida la tension en el capacitor
+%Primero que nada debo graficar en matlab los datos de excel (importarlos)
+clear all; close all; clc;
+
+valores = xlsread('Curvas_Medidas_RLC_2024.xls'); % Importo la tabla de valores
+tt = valores(1:end,1); %Eje del tiempo
+I  = valores(1:end,2); %Valores de corriente
+Vc = valores(1:end,3); %Valores de voltaje en el capacitor
+
+%Grafico el voltaje el voltaje con los valores importados de excel:
+figure(1)
+plot(tt,Vc,'b'); title('Voltaje en el capacitor'); grid on; hold;
+
+%Grafico los valores de corriente de la tabla importados del excel:
+figure(2)
+plot(tt,I,'r'); title('Corriente instantanea, I_t'); grid on; hold on;
+
+%Ahora voy a contruir la entrada (escalon) para la simulación que haré:
+t = linspace(0 , 0.2 , 2000);
+u = linspace(0 ,  0  , 2000);
+vin = 12;
+ii  =  0;
+
+for i=1 : 2000-1
+    ii = ii+1;
+        if ii<100
+            u(i)=0;
+        elseif ii>=100 && ii<500
+            u(i) = vin;
+        elseif ii>=501 && ii<1000
+            u(i) = vin*(-1);
+        elseif ii>=1001 && ii<1500
+            u(i) = vin;
+        else
+            u(i) = vin*(-1);
+        end
+end
+
+figure(3)
+plot( t , u , 'g'); title('Tension de entrada , u_t'); grid on; hold on;
+
+%Aplico Metodo de Chen
+%Elijo 3 puntos equidistantes (en tiempo) en la grafica de la respuesta al
+%escalon del voltaje del capacitor (Tercera columna de excel):
+t1_v = valores(113,1);        y1_v = valores (113,3);
+t2_v = valores(125,1);        y2_v = valores (125,3);
+t3_v = valores(137,1);        y3_v = valores (137,3);
+
+%Ademas, tambien debo elegir un cuarto punto para normalizar la ganancia:
+t4_v = valores(501,1);        y4_v = valores (501,3);
+
+%Grafico mis 4 puntos elegidos en la figura 1:
+figure(1)
+plot([t1_v t2_v t3_v t4_v],[y1_v y2_v y3_v y4_v],'*'); hold on; 
+
+%Debo normalizar la ganancia de voltaje final en el grafico de voltaje
+%porque el metodo de CHEN es para una respuesta al escalon unitario y por
+%eso debo normalizar a uno (divido el valor final entre el valor de la
+%entrada):
+K_v = valores(500,3)/12;
+
+%Procedimiento:
+%Necesito normalizar la altura de todos los puntos elegidos antes de
+%usarlos en el metodo de CHEN que supone una entrada escalon UNITARIO:
+y1_v = y1_v/12;
+y2_v = y2_v/12;
+y3_v = y3_v/12;
+
+%Aplico el metodo de CHEN para estimar la funcion de transferencia del
+%voltaje, comienzo calculando k1 k2 k3
+k1 = (y1_v/K_v)-1;
+k2 = (y2_v/K_v)-1;
+k3 = (y3_v/K_v)-1;
+
+%Calculo del parametro b:
+b=((4)*(k1^3)*(k3))-((3)*(k1^2)*(k2^2))-((4)*(k2^3))+(k3^2)+((6)*(k1)*(k2)*(k3));
+
+%Calculo alfa 1:
+alfa1=((k1*k2)+(k3)-(sqrt(b)))/(2*((k1^2)+(k2)));
+
+%Calculo alfa2:
+alfa2=((k1*k2)+(k3)+(sqrt(b)))/(2*((k1^2)+(k2)));
+
+%Calculo Beta:
+Beta=(k1+alfa2)/(alfa1-alfa2);
+
+%Calculo la constante de tiempo T1:
+T1= -((t1_v-0.01)/(log(alfa1)))
+
+%Calculo la constante de tiempo T2:
+T2= -(t1_v-0.01)/(log(alfa2))
+
+%Calculo la constante de tiempo T3:
+T3= (Beta*(T1-T2))+(T1)
+
+%Teniendo todos los parametros puedo plantear la funcion de transferencia
+%calculada con el metodo de CHEN:
+G_v = tf(K_v*[T3 1],conv([T1 1],[T2 1]))
+
+[y_G_v , t_G_v] = lsim(G_v , u , t);
+%A la funcion de transferencia G_v le 
+%aplico la entrada u en el tiempo t y sus coordenadas las guardo en 2 
+%vectores que despues los puedo graficar
+
+figure(4)
+plot(  tt ,  Vc  , 'b' ); title('Voltaje en el capacitor, V_t'); grid on; hold on;
+plot(t_G_v, y_G_v, 'k') ; title('G_v obtenida con el metodo de CHEN vs tensiones de tabla');
+
+%Obtuve una funcion de transferencia (color negro) que la comparo con la grafica de la
+%tension en el capacitor y veo que son muy similares, entonces puedo
+%considerar la aproximacion aceptable
+%________________________________________________________________________
+%Como no tengo los datos suficientes para calcular mi R L C entonces voy a
+%volver a aplicar CHEN pero en la curva de salida de la corriente, de modo
+%que lograre calcular la funcion de transferencia de la corriente y asi
+%tener mas datos para tener 2 ecuaciones con 3 variables:
+
+%Aplico CHEN a la grafica de la corriente:
+%Elijo 3 puntos equidistantes en la grafica de la corriente:
+t1_i = valores(102,1);      y1_i = valores(102,2);
+t2_i = valores(103,1);      y2_i = valores(103,2);
+t3_i = valores(104,1);      y3_i = valores(104,2);
+%Ademas debo elegir un cuarto punto para normalizar la ganancia:
+t4_i = valores(500,1);      y4_i = valores(500,2);
+%Voy a mostrar mis 4 puntos elegidos desde el codigo:
+figure(2)
+plot([t1_i t2_i t3_i t4_i],[y1_i y2_i y3_i y4_i], '*'); hold on;
+%Procedimiento para aplicar CHEN:
+%Ganancia normalizada a partir de la corriente final, recordar que el
+%metodo de CHEN se aplica para la respuesta al escalon unitario y por eso
+%debo normalizar a uno (divido entre el valor final de la entrada)
+K_i = y4_i;
+%Necesito normalizar la altura de todos los puntos elegidos antes de
+%usarlos en el metodo de CHEN porque se supone que tengo una entrada
+%escalon unitaria:
+%y1_i=y1_i/y4_i;     y2_i=y2_i/y4_i;     y3_i=y3_i/y4_i; 
+
+%Ahora voy a calcular los coeficientesk:
+k1_i=(y1_i/K_i)-1;
+k2_i=(y2_i/K_i)-1;
+k3_i=(y3_i/K_i)-1;
+
+%Calculo el parametro b:
+b_i=((4)*(k1_i^3)*(k3_i))-((3)*(k1_i^2)*(k2_i^2))-((4)*(k2_i^3))+(k3_i^2)+((6)*(k1_i)*(k2_i)*(k3_i));
+
+%Calculo de alfa 1:
+alfa1_i=((k1_i*k2_i)+(k3_i)-(sqrt(b_i)))/(2*((k1_i^2)+(k2_i)));
+
+%Calculo alfa 2
+alfa2_i=((k1_i*k2_i)+(k3_i)+(sqrt(b_i)))/(2*((k1_i^2)+(k2_i)));
+
+%Calculo de Beta_i:
+Beta_i = (k1_i+alfa2_i)/(alfa1_i-alfa2_i);
+
+%Calculo la constante de tiempo T1:
+T1_i = -(t1_i-0.01)/(log(alfa1_i))
+
+%Calculo la constante de tiempo T2:
+T2_i = -(t1_i-0.01)/(log(alfa2_i))
+
+%Calculo la constante de tiempo T3:
+T3_i = (Beta_i*(T1_i-T2_i))+(T1_i)
+
+%Teniendo mis 3 constantes de tiempo puedo plantear mi funcion de
+%transferencia aproximada con el metodo de CHEN:
+G_i = tf(K_i*[T3_i 1],conv([T1_i  1],[T2_i  1]))
+
+[y_G_i,t_G_i] = lsim(G_i , u/12 , t); % A la funcion de transferencia de la 
+%corriente le aplico la entrada u en el tiempo t y sus coordenadas las 
+%guardo en 2 vectores que despues voy a plotear
+
+figure(6)
+plot(tt,I,'red'); title('Corriente'); grid on; hold on;
+plot(t_G_i,y_G_i,'yellow'); title('G_i obtenida con metodo de CHEN ');
+%He graficado mi funcion de transferencia nueva de color amarillo y junto
+%con la funcion original extraida del excel (color rojo) y veo que ambas
+%graficas dan muy parecido, concluyo que la aproximacion es aceptable
+
+%Al comparar la funcion de transferencia obtenida con CHEN contra la
+%funcion de transferencia estandar podemos ir igualando terminos del
+%numerador, denominador y encontré los valores de los componentes:
+% C = 120e-6
+% L = 8.22e-3
+% R = 22.41
+%Aclaracion: en el numerador se suman:
+%0.00012 s + 1.335e-09
+% de donde he despreciado el 1.335e-09 por ser demasiado pequeño en
+% comparacion con 0.00012 s y asi he podido igualar las funciones de
+% transferencia
