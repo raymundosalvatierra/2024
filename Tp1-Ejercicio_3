@@ -1,0 +1,76 @@
+% TRABAJO PRACTICO N° 1
+% Profesor: Julian Pucheta
+% Alumno: Herman Raymundo Salvatierra
+% Caso de estudio 1
+clear all;  clc;  close all;
+% Sistema de 2 variables
+% Ejercicio 3
+%Una vez determiandos los parametros R L C con el metodo de CHEN se pide
+%emplear la serie de corriente desde 0.05 segundos en adelante para validar
+%el resultado superponiendo las graficas 
+
+%Comienzo asignando los valores calculados (POR chen) a mi componentes:
+R = 22
+L = 8.22e-3
+Cap = 120e-6
+
+%Con estos valores de componentes planteo las matrices:
+A = [-R/L  -1/L  ;  1/Cap   0]  % MATRIZ DE ESTADOS
+B = [ 1/L  ;  0]     % MATRIZ DE ENTRADA
+C = [ R 0]        % MATRIZ DE SALIDA 
+D = [0]      % MATRIZ DE TRANSMISION DIRECTA
+
+%Con esto formo mi funcion de transferencia:
+[num,den] = ss2tf(A,B,C,D) %State Space to Transfer Function
+
+%Teniendo mi numerador y denominador puedo plantear mi funcion de
+%transferencia:
+G_i = tf(num,den)
+
+%Elijo el tamaño de paso igual al que esta en la tabla excel:
+tp=0.0001
+
+%HASTA AQUI YA DEFINI LA FUNCION DE TRANSFERENCIA DE LA CORRIENTE CALCULADA
+%CON CHEN
+%____________________________________________________________________________
+%Ahora voy a importar los datos de la corriente desde la tabla excel
+valores = xlsread('Curvas_Medidas_RLC_2024.xls'); % Importo la tabla de valores
+tt = valores(501:end,1); %Eje del tiempo
+I  = valores(501:end,2); %Valores de corriente
+u =  valores(501:end,4); %Valores de corriente
+
+%Notar que en en la columna del tiempo, corriente y la tension de entrada
+%estoy tomando los valores a partir del instante 0.05segundos en adelante
+%____________________________________________________________________________
+
+%Debo establecer el punto de operacion de la corriente y la tension:
+I1(1)=0;
+Vc(1)=0;
+x=[ I1(1)   Vc(1) ]'; %Aca defino las condiciones iniciales
+y(1)=0;
+Xop=[ 0    0]'; % punto de operacion, en este caso es el origen
+
+ii=0;
+vin = 12;
+for i=1:1500
+    ii = ii+tp;
+            
+    %Ahora planteo las variables de estado del sistema lineal
+    xp=A*(x-Xop)+B*u(i);
+    x=x+xp*tp;
+    Y=C*x;
+    y(i+1)=Y(1);
+    I1(i+1)=x(1); %valores de corriente calculados con Euler
+end
+
+%_____________________________________________________________________________
+%Grafico las 2 funciones de transferencia para compararlas:
+%Grafico los valores de corriente de la tabla importados del excel:
+figure(1)
+plot(tt,I,'r'); title('Corriente instantanea, I_t'); grid on; hold on;
+
+%Grafico la funcion de transferencia normalizada que habia calculado con CHEN:
+plot(tt , I1/12 , 'b'); title('Corriente CALCULADA con CHEN'); grid on; hold on;
+
+%Al ver las 2 graficas superpuestas se ven que dan similares, con ovbias
+%deferencias, considero que la aproximacion es aceptable
