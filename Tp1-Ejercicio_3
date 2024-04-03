@@ -70,7 +70,8 @@ figure(1)
 plot(tt,I,'r'); title('Corriente instantanea, I_t'); grid on; hold on;
 
 %Grafico la funcion de transferencia normalizada que habia calculado con CHEN:
-plot(tt , I1/12 , 'b'); title('Corriente CALCULADA con CHEN'); grid on; hold on;
+plot(tt , I1, 'b'); title('Corriente CALCULADA con CHEN'); grid on; hold on;
+%I1 es la corriente, y como verás, está incorrecta porque los valores de R L y Cap son erróneos.
 
 %Al ver las 2 graficas superpuestas se ven que dan similares, con ovbias
 %deferencias, considero que la aproximacion es aceptable
