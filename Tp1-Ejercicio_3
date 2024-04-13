@@ -9,10 +9,11 @@ clear all;  clc;  close all;
 %emplear la serie de corriente desde 0.05 segundos en adelante para validar
 %el resultado superponiendo las graficas 
 
-%Comienzo asignando los valores calculados (POR chen) a mi componentes:
-R = 22
-L = 8.22e-3
-Cap = 120e-6
+%Comienzo asignando mis nuevos parametros de R L C calculados con CHEN 
+%para emplearlos en el ejercicio 1:
+R = 334.5
+L = 122.65e-3
+Cap = 8.043e-6
 
 %Con estos valores de componentes planteo las matrices:
 A = [-R/L  -1/L  ;  1/Cap   0]  % MATRIZ DE ESTADOS
@@ -24,20 +25,18 @@ D = [0]      % MATRIZ DE TRANSMISION DIRECTA
 [num,den] = ss2tf(A,B,C,D) %State Space to Transfer Function
 
 %Teniendo mi numerador y denominador puedo plantear mi funcion de
-%transferencia:
+%transferencia nueva:
 G_i = tf(num,den)
 
 %Elijo el tamaño de paso igual al que esta en la tabla excel:
 tp=0.0001
 
-%HASTA AQUI YA DEFINI LA FUNCION DE TRANSFERENCIA DE LA CORRIENTE CALCULADA
-%CON CHEN
 %____________________________________________________________________________
 %Ahora voy a importar los datos de la corriente desde la tabla excel
 valores = xlsread('Curvas_Medidas_RLC_2024.xls'); % Importo la tabla de valores
 tt = valores(501:end,1); %Eje del tiempo
 I  = valores(501:end,2); %Valores de corriente
-u =  valores(501:end,4); %Valores de corriente
+u =  valores(501:end,4); %Tension de entrada
 
 %Notar que en en la columna del tiempo, corriente y la tension de entrada
 %estoy tomando los valores a partir del instante 0.05segundos en adelante
@@ -51,7 +50,7 @@ y(1)=0;
 Xop=[ 0    0]'; % punto de operacion, en este caso es el origen
 
 ii=0;
-vin = 12;
+%vin = 12;
 for i=1:1500
     ii = ii+tp;
             
@@ -67,11 +66,13 @@ end
 %Grafico las 2 funciones de transferencia para compararlas:
 %Grafico los valores de corriente de la tabla importados del excel:
 figure(1)
-plot(tt,I,'r'); title('Corriente instantanea, I_t'); grid on; hold on;
+plot(tt,I,'r'); title('Corrientes del excel'); grid on; hold on;
 
-%Grafico la funcion de transferencia normalizada que habia calculado con CHEN:
-plot(tt , I1, 'b'); title('Corriente CALCULADA con CHEN'); grid on; hold on;
-%I1 es la corriente, y como verás, está incorrecta porque los valores de R L y Cap son erróneos.
+%Grafico la funcion de transferencia del espacio de estados del ejercicio 1
+%pero ahora utilizando los parametros  R L C que calculé con CHEN:
+plot(tt , I1 , 'b'); title('Rojo es excel Vs azul es chen aplicado al ejercicio 1'); grid on; hold on;
 
 %Al ver las 2 graficas superpuestas se ven que dan similares, con ovbias
-%deferencias, considero que la aproximacion es aceptable
+%diferencias de amplitus debido a que los componentes no son exactamente
+%iguales sino que tienen un 20% de diferencia en sus valores nominales
+%aprox
