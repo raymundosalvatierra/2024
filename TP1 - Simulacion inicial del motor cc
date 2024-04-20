@@ -36,7 +36,7 @@
  
  C = [  0    1     0]
  %Matriz de salida:como esta matriz C se multiplica por las 3 variables de
- %estado (ia , w , ? ) entonces aca especifico que mi salida sera w(omega) y por eso le
+ %estado (ia , w , tita ) entonces aca especifico que mi salida sera w(omega) y por eso le
  %designo con 1 en la posicion que le corresponde, los otros 2 elementos le
  %pongo cero porque no son salidas que analizo en este caso
  
@@ -51,28 +51,28 @@
  polo3=autovalores_A(3); % polo3
  
  %Descubro que:
- %Mi primero polo es: 0
+ %Mi primer polo es: 0
  %Mi segundo polo es:  -  (0.001525982510575)e5
  %Mi tercer polo es:   -  (1.517599700549534)e5
  %_________________________________________________________________________
-  %Ahora que tengo mis matrices de espacio de estados,
+  %Ahora ya tengo mis matrices de espacio de estados,
  %Lo siguiente es preparar parametros para la simulacion
  %Calculo de tamano de paso:
   h = log(0.95)/-151759.9700549534
   %Como mi tamano de paso h es: 3.379896185336417e-07 entonces yo debo
   %elegir un h que sea por lo menos 3 veces más pequeño, que me permita
   %observar la dinamica mas rapida; asi que elijo un valor de:
-  h=1e-6 %Despues de ir probando le coloco su valor verdadero 1e-7
+  h=1e-6 %Despues de ir probando le colocaré su valor verdadero 1e-7
  %_________________________________________________________________________
  %Ahora calculo el tiempo total de simulacion y lo llamare :TT
  TT = log(0.05)/-152.5982510575
- %Establezco un tiempo total grande que sea mucho mayor a este calculado para
+ %Establezco un tiempo total grande de 5 que sea mucho mayor a este calculado para
  %poder ver todos los procesos posibles
- TT = 0.5
+ TT = 0.5 %Es solo por ahora para no demorar mucho en las pruebas
  %_________________________________________________________________________
 
 %Calculo el numero de puntos de mi simulacion: np
-np = TT/h
+np = TT/h  %NumeroDePuntos(Tiempo Total/tamano de paso)
 
 %__________________________________________________________________________
 %Defino un vector x que contiene mis 3 variables de estado respectivamente:
@@ -80,7 +80,7 @@ np = TT/h
 %x(2) = w
 %x(3) = tita
 %__________________________________________________________________________
-%Creo los vectores que contienen mis variables de estado:
+%Creo los vectores que contienen los puntos de mis variables de estado:
 ia=linspace(0,0,np);
 w=linspace(0,0,np);
 tita=linspace(0,0,np);
@@ -112,14 +112,14 @@ TL = 0;
 for i=1 : np-1
     u(i)=vin;
     
- xp = A*(x-xop) + B*[u(i)  TL]';
-          x   = x+xp*h;
+           xp = A*(x-xop) + B*[u(i)  TL]';
+           x  = x+xp*h;
        ia(i+1)= x(1);
         w(i+1)= C*x; %Este w es la que elegi como salida dentro de la matriz C
      tita(i+1)= x(3);
 end
 %__________________________________________________________________________
-%Ahora voy a graficar las 3 variables de estado para ver como se comportan
+%Ahora voy a graficar las 3 variables de estado para ver como se comportan,
 %teniendo una unica entrada que es el voltaje de la fuente de 12V (Luego
 %agregare la segunda entrada que es el torque en un momento determinado)
 figure(1)
@@ -142,3 +142,29 @@ subplot(4,1,4)
 plot(t,u,'yellow'); grid on; 
 title('Entrada de 12V ');
 
+%CONCLUSIONES:
+%Cuando se realiza la simulacion con las consignas originales note que un
+%tamaño de paso de h=1e-7 es demasiado pequeño lo cual implica mucho costo
+%computacional (demora mucho en realizar la simulacion) ademas un tiempo de
+%5 segundos es demasiado grande y no permite apreciar con detalle la forma
+%de la grafica de la velocidad angular ni de la corriente que tienen
+%transitorios en el instante inicial, asi que por esas razones hice la
+%simulacion con un tiempo total de TT=0.5 seg y un tamaño de paso de h=1e-7
+
+%En una de las pruebas iniciales use el tamaño de paso de h=1e-4 y eso me
+%produjo valores de corriente y veloc angular que crecin demasiado en poco
+%tiempo, es decir que ELEGIR UN TAMAÑO DE PASO INADECUADO PRODUCE UN
+%SISTEMA INESTABLE cuando se lo representa en las graficas, formadas con el
+%metodo de Euler.
+
+%En un inicio estoy aplicando solo la entrada de u=12V de la fuente y
+%considerando que es mi unica entrada, posiblemente luego deba incluir la
+%otra entrada de Torque, de cierto valor, aplicado en cierto momento para
+%ver como esto modifica las variables de estado en las graficas
+
+%Este desarrollo que hice no es la unica manera de proceder porque puede
+%haber otro orden para plantear las variables de estado en la ecuacion de
+%estados,pueden haber otros tamaños de paso adecuados y pueden existir 
+%otros metodos para graficar las variables de
+%estado pero esta es la unica que se me ocurrio y me gusta porque esta
+%claro, permite explicar el procedimiento paso a paso
