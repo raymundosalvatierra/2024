@@ -144,15 +144,17 @@ title('Entrada de 12V ');
 
 %CONCLUSIONES:
 %Cuando se realiza la simulacion con las consignas originales note que un
-%tamaño de paso de h=1e-7 es demasiado pequeño lo cual implica mucho costo
-%computacional (demora mucho en realizar la simulacion) ademas un tiempo de
-%5 segundos es demasiado grande y no permite apreciar con detalle la forma
-%de la grafica de la velocidad angular ni de la corriente que tienen
+%tamaño de paso de h=1e-7 brinda buena resolucion pero es demasiado pequeño
+%lo cual implica mucho costo computacional (se demora mucho en realizar
+%la simulacion); ademas un tiempo de 5 segundos abarca toda la dinamica con
+%certeza pero es demasiado grande y no permite apreciar con detalle los cambios
+%en la forma de la grafica de la velocidad angular ni de la corriente que tienen
 %transitorios en el instante inicial, asi que por esas razones hice la
-%simulacion con un tiempo total de TT=0.5 seg y un tamaño de paso de h=1e-7
+%simulacion con un tiempo total de TT=0.5 seg y un tamaño de paso de h=1e-6
+%pero si usted desea puede cambiar esos valores sin problema
 
 %En una de las pruebas iniciales use el tamaño de paso de h=1e-4 y eso me
-%produjo valores de corriente y veloc angular que crecin demasiado en poco
+%produjo valores de corriente y veloc angular que tienden a infinito en poco
 %tiempo, es decir que ELEGIR UN TAMAÑO DE PASO INADECUADO PRODUCE UN
 %SISTEMA INESTABLE cuando se lo representa en las graficas, formadas con el
 %metodo de Euler.
