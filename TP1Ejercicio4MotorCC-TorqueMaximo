@@ -1,0 +1,220 @@
+%TRABAJO PRACTICO N° 1
+% Profesor: Julian Pucheta
+% Alumno: Herman Raymundo Salvatierra
+% Caso de estudio 2
+% Ejericio 4
+% Sistema de 3 variables de estado
+ clear all ; clc; close all;
+ %Dadas las ecuaciones del motor de corriente continua con torque de carga
+ %TL no nulo, con los parametros:
+ Laa = 366e-6;
+ J   = 5e-9;
+ Ra  = 55.6;
+ Bm   = 0;
+ Ki  = 6.49e-3;
+ Km  = 6.53e-3;
+ 
+ %Consigna:Se pide implementar un algoritmo de simulacion para inferir el
+ %comportamiento de las variables de interés mediante integración Euler con
+ %tamano de paso h = 1e-7 segundos para calcular su operacion con un
+ %controlador 
+ %_________________________________________________________________________
+ %EJERCICIO 4:
+%Obtener el torque maximo que puede soportar el motor modelando mediante
+%las ecuaciones del pdf cuando se lo alimenta con 12V graficando para 5
+%segundos de tiempo la velocidad angular y la corriente de modo que podamos
+%conocer su valor maximo y asi dimensionar dispositivos electronicos
+%__________________________________________________________________________
+
+
+ %DESARROLLO: mirando las ecuaciones diferenciales de la consigna, lo
+ %primero que hare es elegir como variable de estados a la corriente ia y
+ %la velocidad angular w, ya que son mi objeto de estudio; ademas tengo 2
+ %ecuaciones que definen la derivada de esas 2 variables de estado:
+ %La tercera variable de estado sera el angulo tita ? porque tambien es
+ %objeto de estudio y su derivada casualmente es omega: w
+ %___________________________________________________________________________
+ %Entonces miro las 2 ecuaciones para plantear mis matrices A B C D :
+ A = [-Ra/Laa  -Km/Laa  0    ;    Ki/J  -Bm/J   0   ;   0   1   0]
+ %Matriz de estados que usare para conocer los polos del sistema y saber si
+ %es estable, ademas con ello puedo conocer la dinamica mas rapida y mas
+ %lenta de mi sistema
+ 
+ B = [  1/Laa      0         ;      0    -1/J       ;   0   0    ]
+ %Matriz de entrada, la multiplicare por las 2 entradas del sistema que son
+ %el voltaje de entrada Va y el torque TL respectivamente
+ 
+ C = [  0    1     0]
+ %Matriz de salida:como esta matriz C se multiplica por las 3 variables de
+ %estado (ia , w , tita ) entonces aca especifico que mi salida sera w(omega) y por eso le
+ %designo con 1 en la posicion que le corresponde, los otros 2 elementos le
+ %pongo cero porque no son salidas que analizo en este caso
+ 
+ D = [  0    0  ]%Matriz de transmision directa: En este caso las entradas no 
+ % tienen conexion directa con la salida y por eso esta matriz tiene elementos nulos
+ %___________________________________________________________________________________
+ %Voy a calcular los autovalores de la matriz A para conocer los polos
+ %format long
+ autovalores_A=eig(A)
+ polo1=autovalores_A(1); % polo1 
+ polo2=autovalores_A(2); % polo2
+ polo3=autovalores_A(3); % polo3
+ 
+ %Descubro que:
+ %Mi primer polo es: 0
+ %Mi segundo polo es:  -  (0.001525982510575)e5
+ %Mi tercer polo es:   -  (1.517599700549534)e5
+ %_________________________________________________________________________
+  %Ahora ya tengo mis matrices de espacio de estados,
+ %Lo siguiente es preparar parametros para la simulacion
+ %Calculo de tamano de paso:
+  h = log(0.95)/-151759.9700549534
+  %Como mi tamano de paso h es: 3.379896185336417e-07 entonces yo debo
+  %elegir un h que sea por lo menos 3 veces más pequeño, que me permita
+  %observar la dinamica mas rapida; asi que elijo un valor de:
+  h=1e-6 %Despues de ir probando le colocaré su valor verdadero 1e-7
+ %_________________________________________________________________________
+ %Ahora calculo el tiempo total de simulacion y lo llamare :TT
+ TT = log(0.05)/-152.5982510575
+ %Establezco un tiempo total grande de 5 que sea mucho mayor a este calculado para
+ %poder ver todos los procesos posibles
+ TT = 0.6 %Es solo por ahora para no demorar mucho en las pruebas
+ %_________________________________________________________________________
+
+%Calculo el numero de puntos de mi simulacion: np
+np = TT/h  %NumeroDePuntos(Tiempo Total/tamano de paso)
+
+%__________________________________________________________________________
+%Defino un vector x que contiene mis 3 variables de estado respectivamente:
+%x(1) = ia
+%x(2) = w
+%x(3) = tita
+%__________________________________________________________________________
+%Creo los vectores que contienen los puntos de mis variables de estado:
+ia=linspace(0,0,np);
+w=linspace(0,0,np);
+tita=linspace(0,0,np);
+%__________________________________________________________________________
+x = [ia(1)  w(1) tita(1) ]' 
+
+%Voy a establecer las condiciones iniciales:
+ia(1)=0;
+w(1)=0;
+tita(1)=0;
+
+%Voy a elegir el punto de operacion:
+xop = [0   0   0]'
+
+%__________________________________________________________________________
+%Para nombrar la tension de entrada de la fuente de 12V la llamare Va 
+% y sera un numero constante:
+Va = 12;
+%__________________________________________________________________________
+%Voy a formar mi vector de tiempo y la entrada Va de 12V:
+t = linspace(0,TT,np);
+u = linspace(0,0,np);
+%Al inicio hare la simulacion con la entrada unica de 12V y luego le
+%agregare la otra entrada que es un torque
+vin = 12;
+%__________________________________________________________________________
+%Viendo los valores de torque en el excel puedo reconocer que el torque
+%(segunda entrada) tiene un valor de aproximadamente 0.0010 y empieza a
+%existir a partir del tiempo t = 0.1869 seg
+%Con esa informacion, voy a crear un torque aproximado y voy probando como
+%entrada hasta ver que valor de torque me produce velocidades angulares
+%negativas y ahi sabre el torque maximo soportado por este motor
+%TL = 0.0010; 
+%TL = 0.0020;Produjo valores negativos de veloc angular->excede el %torque Max
+%TL = 0.0015;Se sigue excediendo un poquito
+%TL = 0.0012;Produce velocidades positivas
+%TL = 0.0013;Todavia da valores normales de veloc
+TL = 0.00135;%Es el maximo torque que permite trabajar al motor con normalidad
+tL = TL*heaviside(t - 0.1869 );
+%__________________________________________________________________________
+%Ahora aplico el metodo de Euler para definir como iran creciendo mis variables de estado:
+for i=1 : np-1
+    u(i)=vin;
+    
+           xp = A*(x-xop) + B*[u(i)  tL(i)]';
+           x  = x+xp*h;
+       ia(i+1)= x(1);
+        w(i+1)= C*x; %Este w es la que elegi como salida dentro de la matriz C
+     tita(i+1)= x(3);
+end
+%__________________________________________________________________________
+%Ahora voy a graficar las 3 variables de estado para ver como se comportan,
+%teniendo una unica entrada que es el voltaje de la fuente de 12V (Luego
+%agregare la segunda entrada que es el torque en un momento determinado)
+figure(1)
+subplot(4,1,1)
+plot(t,w,'green'); grid on; 
+title('Veloc angular [Rad/seg]');
+%__________________________________________________________________________
+
+subplot(4,1,2)
+plot(t,ia,'blue'); grid on; 
+title('Corriente de armadura');
+%__________________________________________________________________________
+
+subplot(4,1,3)
+plot(t,tita,'red'); grid on; 
+title('Posicion angular');
+%__________________________________________________________________________
+
+subplot(4,1,4)
+plot(t,tL,'yellow'); grid on; 
+title('Entrada Torque ');
+
+%CONCLUSIONES:
+%Cuando se realiza la simulacion con las consignas originales note que un
+%tamaño de paso de h=1e-7 brinda buena resolucion pero es demasiado pequeño
+%lo cual implica mucho costo computacional (se demora mucho en realizar
+%la simulacion); ademas un tiempo de 5 segundos abarca toda la dinamica con
+%certeza pero es demasiado grande y no permite apreciar con detalle los cambios
+%en la forma de la grafica de la velocidad angular ni de la corriente que tienen
+%transitorios en el instante inicial, asi que por esas razones hice la
+%simulacion con un tiempo total de TT=0.5 seg y un tamaño de paso de h=1e-6
+%pero si usted desea puede cambiar esos valores sin problema
+
+%En una de las pruebas iniciales use el tamaño de paso de h=1e-4 y eso me
+%produjo valores de corriente y veloc angular que tienden a infinito en poco
+%tiempo, es decir que ELEGIR UN TAMAÑO DE PASO INADECUADO PRODUCE UN
+%SISTEMA INESTABLE cuando se lo representa en las graficas, formadas con el
+%metodo de Euler.
+
+%En un inicio estoy aplicando solo la entrada de u=12V de la fuente y
+%considerando que es mi unica entrada, posiblemente luego deba incluir la
+%otra entrada de Torque, de cierto valor, aplicado en cierto momento para
+%ver como esto modifica las variables de estado en las graficas
+
+%Este desarrollo que hice no es la unica manera de proceder porque puede
+%haber otro orden para plantear las variables de estado en la ecuacion de
+%estados,pueden haber otros tamaños de paso adecuados y pueden existir 
+%otros metodos para graficar las variables de
+%estado pero esta es la unica que se me ocurrio y me gusta porque esta
+%claro, permite explicar el procedimiento paso a paso
+
+%Para descubrir el torque maximo he comenzado probando con un valor de
+%torque similar al torque dado en las curvas del motor de la tabla Excel, y
+%fui probando con distintos valores hasta ver cual torque me daba la menor
+%velocidada angular posible y positiva, y asi descubrir con que torque el
+%motor puede funcionar sin cambiar el sentido de giro
+%Despues de algunas pruebas, el torque maximo soportado por este motor es:
+%TL = 0.00135
+
+%En este ejericio no he graficado la entrada de 12V de la fuente porque ya
+%se sobreentiende que existe una fuente que alimenta al motor, ademas ya la
+%he mostrado en el codigo anterior, subido en mi GITHUB, ademas en este
+%ejercicio el objeto de estudio es descubrir el torque maximo y poder verlo
+%graficamente (color amarillo) actuando desde el tiempo t=0.1869 
+
+%Desde el momento que se aplica el torque, se puede observar en las
+%graficas que:}
+%La corriente de armadura se eleva, porque aumento el consumo y se
+%establece en 0.2Amp aproximadamente
+%La posicion angular sigue creciendo pero muy poquito, casi nada, y esto se
+%debe a que el motor esta trabajando dentro de su limite y ya casi no puede
+%girar
+%La veloc angular sigue siendo positiva pero muy cercana a cero,
+%demostrando que este torque es el maximo que puede soportar antes de
+%cambiar su sentido de giro
