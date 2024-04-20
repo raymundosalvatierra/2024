@@ -1,0 +1,144 @@
+%TRABAJO PRACTICO N° 1
+% Profesor: Julian Pucheta
+% Alumno: Herman Raymundo Salvatierra
+% Caso de estudio 2
+% Sistema de 3 variables de estado
+ clear all ; clc; close all;
+ %Dadas las ecuaciones del motor de corriente continua con torque de carga
+ %TL no nulo, con los parametros:
+ Laa = 366e-6;
+ J   = 5e-9;
+ Ra  = 55.6;
+ Bm   = 0;
+ Ki  = 6.49e-3;
+ Km  = 6.53e-3;
+ 
+ %Consigna:Se pide implementar un algoritmo de simulacion para inferir el
+ %comportamiento de las variables de interés mediante integración Euler con
+ %tamano de paso h = 1e-7 segundos para calcular su operacion con un
+ %controlador 
+ %DESARROLLO: mirando las ecuaciones diferenciales de la consigna, lo
+ %primero que hare es elegir como variable de estados a la corriente ia y
+ %la velocidad angular w, ya que son mi objeto de estudio; ademas tengo 2
+ %ecuaciones que definen la derivada de esas 2 variables de estado:
+ %La tercera variable de estado sera el angulo tita ? porque tambien es
+ %objeto de estudio y su derivada casualmente es omega: w
+ %___________________________________________________________________________
+ %Entonces miro las 2 ecuaciones para plantear mis matrices A B C D :
+ A = [-Ra/Laa  -Km/Laa  0    ;    Ki/J  -Bm/J   0   ;   0   1   0]
+ %Matriz de estados que usare para conocer los polos del sistema y saber si
+ %es estable, ademas con ello puedo conocer la dinamica mas rapida y mas
+ %lenta de mi sistema
+ 
+ B = [  1/Laa      0         ;      0    -1/J       ;   0   0    ]
+ %Matriz de entrada, la multiplicare por las 2 entradas del sistema que son
+ %el voltaje de entrada Va y el torque TL respectivamente
+ 
+ C = [  0    1     0]
+ %Matriz de salida:como esta matriz C se multiplica por las 3 variables de
+ %estado (ia , w , ? ) entonces aca especifico que mi salida sera w(omega) y por eso le
+ %designo con 1 en la posicion que le corresponde, los otros 2 elementos le
+ %pongo cero porque no son salidas que analizo en este caso
+ 
+ D = [  0    0  ]%Matriz de transmision directa: En este caso las entradas no 
+ % tienen conexion directa con la salida y por eso esta matriz tiene elementos nulos
+ %___________________________________________________________________________________
+ %Voy a calcular los autovalores de la matriz A para conocer los polos
+ %format long
+ autovalores_A=eig(A)
+ polo1=autovalores_A(1); % polo1 
+ polo2=autovalores_A(2); % polo2
+ polo3=autovalores_A(3); % polo3
+ 
+ %Descubro que:
+ %Mi primero polo es: 0
+ %Mi segundo polo es:  -  (0.001525982510575)e5
+ %Mi tercer polo es:   -  (1.517599700549534)e5
+ %_________________________________________________________________________
+  %Ahora que tengo mis matrices de espacio de estados,
+ %Lo siguiente es preparar parametros para la simulacion
+ %Calculo de tamano de paso:
+  h = log(0.95)/-151759.9700549534
+  %Como mi tamano de paso h es: 3.379896185336417e-07 entonces yo debo
+  %elegir un h que sea por lo menos 3 veces más pequeño, que me permita
+  %observar la dinamica mas rapida; asi que elijo un valor de:
+  h=1e-6 %Despues de ir probando le coloco su valor verdadero 1e-7
+ %_________________________________________________________________________
+ %Ahora calculo el tiempo total de simulacion y lo llamare :TT
+ TT = log(0.05)/-152.5982510575
+ %Establezco un tiempo total grande que sea mucho mayor a este calculado para
+ %poder ver todos los procesos posibles
+ TT = 0.5
+ %_________________________________________________________________________
+
+%Calculo el numero de puntos de mi simulacion: np
+np = TT/h
+
+%__________________________________________________________________________
+%Defino un vector x que contiene mis 3 variables de estado respectivamente:
+%x(1) = ia
+%x(2) = w
+%x(3) = tita
+%__________________________________________________________________________
+%Creo los vectores que contienen mis variables de estado:
+ia=linspace(0,0,np);
+w=linspace(0,0,np);
+tita=linspace(0,0,np);
+%__________________________________________________________________________
+x = [ia(1)  w(1) tita(1) ]' 
+
+%Voy a establecer las condiciones iniciales:
+ia(1)=0;
+w(1)=0;
+tita(1)=0;
+
+%Voy a elegir el punto de operacion:
+xop = [0   0   0]'
+
+%__________________________________________________________________________
+%Para nombrar la tension de entrada de la fuente de 12V la llamare Va 
+% y sera un numero constante:
+Va = 12;
+%__________________________________________________________________________
+%Voy a formar mi vector de tiempo y la entrada Va de 12V:
+t = linspace(0,TT,np);
+u = linspace(0,0,np);
+%Al inicio hare la simulacion con la entrada unica de 12V y luego le
+%agregare la otra entrada que es un torque
+vin = 12;
+TL = 0; 
+%__________________________________________________________________________
+%Ahora aplico el metodo de Euler para definir como iran creciendo mis variables de estado:
+for i=1 : np-1
+    u(i)=vin;
+    
+ xp = A*(x-xop) + B*[u(i)  TL]';
+          x   = x+xp*h;
+       ia(i+1)= x(1);
+        w(i+1)= C*x; %Este w es la que elegi como salida dentro de la matriz C
+     tita(i+1)= x(3);
+end
+%__________________________________________________________________________
+%Ahora voy a graficar las 3 variables de estado para ver como se comportan
+%teniendo una unica entrada que es el voltaje de la fuente de 12V (Luego
+%agregare la segunda entrada que es el torque en un momento determinado)
+figure(1)
+subplot(4,1,1)
+plot(t,w,'green'); grid on; 
+title('Veloc angular [Rad/seg]');
+%__________________________________________________________________________
+
+subplot(4,1,2)
+plot(t,ia,'blue'); grid on; 
+title('Corriente de armadura');
+%__________________________________________________________________________
+
+subplot(4,1,3)
+plot(t,tita,'red'); grid on; 
+title('Posicion angular');
+%__________________________________________________________________________
+
+subplot(4,1,4)
+plot(t,u,'yellow'); grid on; 
+title('Entrada de 12V ');
+
