@@ -195,7 +195,7 @@ G_i = tf(K_i*[T3i 1],conv([T1i 1],[T2i 1]))
 %corriente con la funcion de transferncia generica y obtener los
 %parametros:
 J  = 4.13e-6
-B  = 7.465e-16
+Bm  = 7.465e-16
 L  = 499e-6
 R  = 20
 Ki = 0.0605
@@ -205,13 +205,86 @@ Km = 16.52
 %Me invento una funcion de entrada que semeja la fuente
 t = linspace(0,valores(end,1),32370);
 u = linspace(0,0,32370);
-u = fuente*heaviside(t - tiempo_muerto );
+entrada_u = fuente*heaviside(t - tiempo_muerto );
+%__________________________________________________________________________
+%Tambien me invento otra funcion de entrada que asemeje al torque:
+torque=1e-3;
+TL = linspace(0,0,32370);
+entrada_TL = torque*heaviside(t - valores(16684,1) );
 %Preparo la simulacion de mi modelo G_w con la señal de entrada:
-[ejeTW,ejeYW] = lsim(G_w,u,t);
+[ejeTW,ejeYW] = lsim(G_w,entrada_u,t);
 %__________________________________________________________________________
 figure(4)
 %Grafico la veloc angular del excel Vs modelo:
 plot(ejeYW,ejeTW,'green' , tt,w,'red'); 
 title('Verde es el modelo   Vs   rojo es excel'); grid on; hold on;
 %__________________________________________________________________________
+figure(5)
+plot(t,entrada_TL,'yellow');  grid on;  hold on;
+%__________________________________________________________________________
+%Con todo esto ya puedo preparar mi simulacion teniendo mis 2 entradas
+%Utilizare el mismo metodo de euler del ejercicio 4:
+%Primero formulo mis matrices de estado:
+A = [-R/L  -Km/L  0    ;    Ki/J  -Bm/J   0   ;   0   1   0]
+B = [  1/L      0         ;      0    -1/J       ;   0   0    ]
+C = [  0    1     0]
+D = [  0    0  ]
 
+h=5e-6;
+TT = 0.6
+np = 32370
+
+corriente = linspace(0,0,np);
+velocidad = linspace(0,0,np);
+   tita   = linspace(0,0,np);
+
+x = [corriente(1)  velocidad(1) tita(1) ]'
+
+corriente(1) = 0;
+velocidad(1) = 0;
+     tita(1) = 0;
+     
+     xop = [0   0   0]'
+     
+for i=1 : np-1
+    
+    
+         xp = A*(x-xop) + B*[entrada_u(i)  entrada_TL(i)]';
+         x  = x+xp*h;
+     corriente(i+1)= x(1);
+      velocidad(i+1)= C*x; %Este w es la que elegi como salida dentro de la matriz C
+   tita(i+1)= x(3);
+end
+
+figure(6)
+subplot(2,1,1)
+plot(t,velocidad,'blue'); grid on; 
+title('Modelo con CHEN');
+
+subplot(2,1,2)
+plot(tt,w,'red'); 
+title('Veloc del Excel');
+%__________________________________________________________________________
+figure(7)
+subplot(2,1,1)
+plot(t,corriente,'blue'); grid on; 
+title('Modelo con CHEN');
+
+subplot(2,1,2)
+plot(tt,ia,'red');  
+title('Corriente DEL Excel');
+%__________________________________________________________________________
+%CONCLUSIONES:
+%En la figura 6 y 7 donde compruebo la forma de la velocidad angular y de la
+%corriente, con los parametros obtenidos, primero use un tamaño de paso
+%h=5e-5 (para reducir el costo computacional) y me daba una grafica con una
+%veloc y una corriente que tienen cambios demasiado bruscos en el momento
+%que se activa la fuente;
+%Luego probe con un h=5e-6 y me dio graficas con la misma forma que los
+%datos originales del excel
+%Finalmente probé con un h=5e-7 y por fin pude ver un comportamiento
+%moderado y una forma muy similar a la obtenida con los datos del excel
+
+%Al comparar el grafico de mi modelo obtenido con CHEN Vs los datos de
+%excel veo que sus alturas difieren en un factor constante, debo ajustar
+%algunos parametros, pero la forma me da muy parecidos
