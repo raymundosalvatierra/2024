@@ -1,0 +1,217 @@
+%TRABAJO PRACTICO N° 1
+% Profesor: Julian Pucheta
+% Alumno: Herman Raymundo Salvatierra
+% Caso de estudio 2
+% Sistema de 3 variables de estado
+ clear all ; clc; close all;
+ 
+ %EJERCICIO 5
+ %A partir de las curvas de mediciones de las variables graficadas en la 
+ %Fig. 1-3, se requiere obtener el modelo del sistema considerando:
+ % como entrada un escalón de 12V
+ % como salida a la velocidad angular, y al torque de carga TL aplicado, una perturbación. 
+ %En el archivo Curvas_Medidas_Motor.xls están las mediciones, 
+ %en la primer hoja los valores y en la segunda los nombres.
+ %Se requiere obtener el modelo dinámico, para establecer las constantes del modelo
+%__________________________________________________________________________
+%DESARROLLO: Primero importo los valores de cada columna del excel:
+valores = xlsread('Curvas_Medidas_Motor_2024.xls'); % Importo la tabla de valores
+tt = valores(1:end,1); %Eje del tiempo
+w  = valores(1:end,2); %Veloc angular
+ia = valores(1:end,3); %Corriente de armadura
+Va = valores(1:end,4); %Tension de entrada
+TL = valores(1:end,5); %Torque de perturbacion
+
+%Grafico la veloc angular del excel:
+figure(1)
+subplot(4,1,1)
+plot(tt,w,'green'); 
+title('Veloc angular segun excel [Rad/seg]'); grid on; hold on;
+%__________________________________________________________________________
+%Grafico la Corriente de armadura del excel:
+subplot(4,1,2)
+plot(tt,ia,'blue'); 
+title('Corriente de armadura del excel'); grid on; hold on;
+%__________________________________________________________________________
+%Grafico la Tension de entrada del excel:
+subplot(4,1,3)
+plot(tt,Va,'yellow'); 
+title('Tension de entrada del excel'); grid on; hold on;
+%Recordar: la fuente tiene un valor fijo de 12V, entonces declaro:
+fuente = 12;
+%__________________________________________________________________________
+%Grafico el Torque del excel:
+subplot(4,1,4)
+plot(tt,TL,'red'); 
+title('Torque del excel'); grid on; hold on;
+%__________________________________________________________________________
+
+%Para obtener el modelo dinamico voy a emplear el METODO DE CHEN:
+%Lo primero que hare es elegir 3 puntos en las graficas de salida donde:
+%Tenga condiciones iniciales nulas
+%Los 3 puntos deben ser equidistantes en el tiempo
+%Deben ser elegidos donde haya maxima variacion de la funcion
+%__________________________________________________________________________
+%CALCULO DEL MODELO PARA LA VELOCIDAD ANGULAR:
+%Elijo 3 puntos equidistantes, contados desde el punto inicial, en la grafica de la veloc angular:
+
+t1_w = valores( 703,1);        y1_w = valores (703,2);
+t2_w = valores( 704,1);        y2_w = valores (704,2);
+t3_w = valores( 705,1);        y3_w = valores (705,2);
+%__________________________________________________________________________
+%Elijo el 4to punto como un valor final para normalizar al escalon (ganancia)
+t4_w = valores( 13000,1);        y4_w = valores (13000,2);
+%__________________________________________________________________________
+%El siguiente es solo el punto inicial donde comienza la grafica para mi
+%Osea que todo el tiempo a la izq de aca (tiempo muerto) lo voy a omitir 
+%porque recien a partir de este tiempo se activa la fuente que enciende al motor:
+t5_w = valores( 702,1);        y5_w = valores (702,2);
+tiempo_muerto = t5_w;
+%__________________________________________________________________________
+%
+%Grafico estos 5 puntos en la figura 2 para mostrarlos:
+figure(2)
+plot(tt,w,'green'); title('Puntos elegidos de la Veloc Angular de excel'); grid on; hold on;
+plot( [t1_w t2_w t3_w t4_w t5_w ],[y1_w y2_w y3_w y4_w y5_w ],'*'); hold on; 
+%__________________________________________________________________________
+%PROCEDIMIENTO DE CHEN:
+%Debo normalizar la ganancia de voltaje final en el grafico de veloc angular
+%porque el metodo de CHEN es para una respuesta al escalon unitario y por
+%eso debo normalizar a uno (divido el valor final entre el valor de la
+%entrada):
+K_w = y4_w/fuente;
+
+%Procedimiento:
+%Necesito normalizar la altura de todos los puntos elegidos antes de
+%usarlos en el metodo de CHEN que supone una entrada escalon UNITARIO:
+y1_w = y1_w/fuente;
+y2_w = y2_w/fuente;
+y3_w = y3_w/fuente;
+
+%Aplico el metodo de CHEN para estimar la funcion de transferencia del
+%voltaje, comienzo calculando k1 k2 k3
+k1 = (y1_w/K_w)-1;
+k2 = (y2_w/K_w)-1;
+k3 = (y3_w/K_w)-1;
+
+%Calculo del parametro b:
+b=((4)*(k1^3)*(k3))-((3)*(k1^2)*(k2^2))-((4)*(k2^3))+(k3^2)+((6)*(k1)*(k2)*(k3));
+
+%Calculo alfa 1:
+alfa1=((k1*k2)+(k3)-(sqrt(b)))/(2*((k1^2)+(k2)))
+
+%Calculo alfa2:
+alfa2=((k1*k2)+(k3)+(sqrt(b)))/(2*((k1^2)+(k2)))
+
+%Calculo Beta:
+Beta=(k1+alfa2)/(alfa1-alfa2);
+
+%Calculo la constante de tiempo T1:
+T1= -((t1_w-tiempo_muerto)/(log(alfa1)))
+
+%Calculo la constante de tiempo T2:
+T2= -(t1_w-tiempo_muerto)/(log(alfa2))
+
+%Calculo la constante de tiempo T3:
+T3= (Beta*(T1-T2))+(T1)
+
+%Teniendo todos los parametros puedo plantear la funcion de transferencia
+%calculada con el metodo de CHEN:
+G_w = tf(K_w*[T3 1],conv([T1 1],[T2 1]))
+%Hasta aca ya pude calcular una funcion de transferencia, la relacion de:
+%   G_w = (w)/(Va)
+%__________________________________________________________________________
+%__________________________________________________________________________
+%Ahora voy a aplicar CHEN para calcular el modelo de la corriente en funcion 
+%del voltaje de entrada:
+%CALCULO DEL MODELO PARA LA VELOCIDAD ANGULAR:
+%Elijo 3 puntos equidistantes, contados desde el punto inicial, en la grafica de la veloc angular:
+
+t1_i = valores( 703,1);        y1_i = valores (703,3);
+t2_i = valores( 704,1);        y2_i = valores (704,3);
+t3_i = valores( 705,1);        y3_i = valores (705,3);
+%__________________________________________________________________________
+%Elijo un 4to punto que usare para normalizar la ganancia:
+t4_i = valores( 821,1);        y4_i = valores (821,3);
+%__________________________________________________________________________
+%El siguiente es solo el punto inicial donde comienza la grafica para mi
+%Osea que todo el tiempo a la izq de aca (tiempo muerto) lo voy a omitir 
+%porque recien a partir de este tiempo se activa la fuente que enciende al motor:
+t5_i = valores( 702,1);        y5_i = valores (702,3);
+tiempo_muerto = t5_i;
+%__________________________________________________________________________
+%
+%Grafico estos 5 puntos en la figura 2 para mostrarlos:
+figure(3)
+plot(tt,ia,'blue'); title('Puntos elegidos de la Corriente de excel'); grid on; hold on;
+plot( [t1_i t2_i t3_i t4_i t5_i ],[y1_i y2_i y3_i y4_i y5_i ],'*'); hold on; 
+%__________________________________________________________________________
+%PROCEDIMIENTO DE CHEN:
+%Debo normalizar la ganancia de voltaje final en el grafico de veloc angular
+%porque el metodo de CHEN es para una respuesta al escalon unitario y por
+%eso debo normalizar a uno (divido el valor final entre el valor de la
+%entrada):
+K_i = y4_i/fuente;
+
+%Procedimiento:
+%Necesito normalizar la altura de todos los puntos elegidos antes de
+%usarlos en el metodo de CHEN que supone una entrada escalon UNITARIO:
+y1_i = y1_i/fuente;
+y2_i = y2_i/fuente;
+y3_i = y3_i/fuente;
+
+%Aplico el metodo de CHEN para estimar la funcion de transferencia del
+%voltaje, comienzo calculando k1 k2 k3
+k1i = (y1_i/K_i)-1;
+k2i = (y2_i/K_i)-1;
+k3i = (y3_i/K_i)-1;
+
+%Calculo del parametro b:
+bi=((4)*(k1i^3)*(k3i))-((3)*(k1i^2)*(k2i^2))-((4)*(k2i^3))+(k3i^2)+((6)*(k1i)*(k2i)*(k3i));
+
+%Calculo alfa 1:
+alfa1i=((k1i*k2i)+(k3i)-(sqrt(bi)))/(2*((k1i^2)+(k2i)));
+
+%Calculo alfa2:
+alfa2i=((k1i*k2i)+(k3i)+(sqrt(bi)))/(2*((k1i^2)+(k2i)));
+
+%Calculo Beta:
+Betai=(k1i+alfa2i)/(alfa1i-alfa2i);
+
+%Calculo la constante de tiempo T1:
+T1i= -((t1_i-tiempo_muerto)/(log(alfa1i)));
+
+%Calculo la constante de tiempo T2:
+T2i= -(t1_i-tiempo_muerto)/(log(alfa2i));
+
+%Calculo la constante de tiempo T3:
+T3i= (Betai*(T1i-T2i))+(T1i);
+
+%Teniendo todos los parametros puedo plantear la funcion de transferencia
+%calculada con el metodo de CHEN:
+G_i = tf(K_i*[T3i 1],conv([T1i 1],[T2i 1]))
+%__________________________________________________________________________
+%Ahora puedo igualar mi modelo obtenido con CHEN para la
+%corriente con la funcion de transferncia generica y obtener los
+%parametros:
+J  = 4.13e-6
+B  = 7.465e-16
+L  = 499e-6
+R  = 20
+Ki = 0.0605
+Km = 16.52
+%__________________________________________________________________________
+%COMPROBACION DEL MODELO OBTENIDO CON VALORES DE EXCEL GRAFICADOS:
+%Me invento una funcion de entrada que semeja la fuente
+t = linspace(0,valores(end,1),32370);
+u = linspace(0,0,32370);
+u = fuente*heaviside(t - tiempo_muerto );
+%Preparo la simulacion de mi modelo G_w con la señal de entrada:
+[ejeTW,ejeYW] = lsim(G_w,u,t);
+%__________________________________________________________________________
+figure(4)
+%Grafico la veloc angular del excel Vs modelo:
+plot(ejeYW,ejeTW,'green' , tt,w,'red'); 
+title('Verde es el modelo   Vs   rojo es excel'); grid on; hold on;
+%__________________________________________________________________________
+
