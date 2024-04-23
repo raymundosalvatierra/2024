@@ -60,7 +60,7 @@ t2_w = valores( 704,1);        y2_w = valores (704,2);
 t3_w = valores( 705,1);        y3_w = valores (705,2);
 %__________________________________________________________________________
 %Elijo el 4to punto como un valor final para normalizar al escalon (ganancia)
-t4_w = valores( 13000,1);        y4_w = valores (13000,2);
+t4_w = valores( 16683,1);        y4_w = valores (16683,2);
 %__________________________________________________________________________
 %El siguiente es solo el punto inicial donde comienza la grafica para mi
 %Osea que todo el tiempo a la izq de aca (tiempo muerto) lo voy a omitir 
@@ -132,7 +132,7 @@ t2_i = valores( 704,1);        y2_i = valores (704,3);
 t3_i = valores( 705,1);        y3_i = valores (705,3);
 %__________________________________________________________________________
 %Elijo un 4to punto que usare para normalizar la ganancia:
-t4_i = valores( 821,1);        y4_i = valores (821,3);
+t4_i = valores( 16683,1);        y4_i = valores (16683,3);
 %__________________________________________________________________________
 %El siguiente es solo el punto inicial donde comienza la grafica para mi
 %Osea que todo el tiempo a la izq de aca (tiempo muerto) lo voy a omitir 
@@ -195,84 +195,81 @@ G_i = tf(K_i*[T3i 1],conv([T1i 1],[T2i 1]))
 %corriente con la funcion de transferncia generica y obtener los
 %parametros:
 J  = 4.13e-6
-Bm  = 7.465e-16
+Bm = 0
 L  = 499e-6
 R  = 20
-Ki = 0.0605
-Km = 16.52
+Ki = 16.52
+Km = 1/Ki
 %__________________________________________________________________________
 %COMPROBACION DEL MODELO OBTENIDO CON VALORES DE EXCEL GRAFICADOS:
-%Me invento una funcion de entrada que semeja la fuente
-t = linspace(0,valores(end,1),32370);
-u = linspace(0,0,32370);
-entrada_u = fuente*heaviside(t - tiempo_muerto );
-%__________________________________________________________________________
-%Tambien me invento otra funcion de entrada que asemeje al torque:
-torque=1e-3;
-TL = linspace(0,0,32370);
-entrada_TL = torque*heaviside(t - valores(16684,1) );
-%Preparo la simulacion de mi modelo G_w con la señal de entrada:
-[ejeTW,ejeYW] = lsim(G_w,entrada_u,t);
-%__________________________________________________________________________
-figure(4)
-%Grafico la veloc angular del excel Vs modelo:
-plot(ejeYW,ejeTW,'green' , tt,w,'red'); 
-title('Verde es el modelo   Vs   rojo es excel'); grid on; hold on;
-%__________________________________________________________________________
-figure(5)
-plot(t,entrada_TL,'yellow');  grid on;  hold on;
-%__________________________________________________________________________
-%Con todo esto ya puedo preparar mi simulacion teniendo mis 2 entradas
-%Utilizare el mismo metodo de euler del ejercicio 4:
-%Primero formulo mis matrices de estado:
-A = [-R/L  -Km/L  0    ;    Ki/J  -Bm/J   0   ;   0   1   0]
-B = [  1/L      0         ;      0    -1/J       ;   0   0    ]
-C = [  0    1     0]
-D = [  0    0  ]
 
-h=5e-6;
-TT = 0.6
-np = 32370
+X = -[0; 0 ;0 ;0];
+i=0;
+h=1e-6; % tamaño de paso par aplicar Euler
 
-corriente = linspace(0,0,np);
-velocidad = linspace(0,0,np);
-   tita   = linspace(0,0,np);
+tF=0.6; % tiempo total de la simulacion
 
-x = [corriente(1)  velocidad(1) tita(1) ]'
+%u = fuente; % Entrada y es constante
+Ts = h;
 
-corriente(1) = 0;
-velocidad(1) = 0;
-     tita(1) = 0;
-     
-     xop = [0   0   0]'
-     
-for i=1 : np-1
-    
-    
-         xp = A*(x-xop) + B*[entrada_u(i)  entrada_TL(i)]';
-         x  = x+xp*h;
-     corriente(i+1)= x(1);
-      velocidad(i+1)= C*x; %Este w es la que elegi como salida dentro de la matriz C
-   tita(i+1)= x(3);
+for t = 0 : h : tF
+i=i+1 ; 
+
+u = fuente*heaviside(t-0.035);
+torque = 7e-3*heaviside(t-0.18690);
+
+X = modmotor(h, X, u , torque); %Declaro las 4 variables que recibira mi vector X
+
+x1(i)=X(1);% veloc angular
+x2(i)=X(2);% aceleracion
+x3(i)=X(3);% ia
+x4(i)=X(4);% tita
+acc(i)=u;
 end
 
-figure(6)
-subplot(2,1,1)
-plot(t,velocidad,'blue'); grid on; 
-title('Modelo con CHEN');
+t = 0 : h : tF ;
 
-subplot(2,1,2)
-plot(tt,w,'red'); 
-title('Veloc del Excel');
-%__________________________________________________________________________
-figure(7)
-subplot(2,1,1)
-plot(t,corriente,'blue'); grid on; 
-title('Modelo con CHEN');
+figure(5)
+subplot(4,1,1);hold on;
+plot(t,x1,'g');title('Veloc angular');
 
-subplot(2,1,2)
-plot(tt,ia,'red');  
-title('Corriente DEL Excel');
+subplot(4,1,2);hold on;
+plot(t,torque,'r');title('torque');
+
+subplot(4,1,3);hold on;
+plot(t,x3,'b');title('Corriente');
+
+subplot(4,1,4);hold on;
+plot(t,acc,'k');title('Fuente de 12V');
+
+xlabel('Tiempo [Seg.]');
+
+function [X] = modmotor(h, xant, accion , TL)%Lo saco de la filmina de clase 1 del profe
+%Empleo mis valores de mi motor calculado, osea de mi modelo
+Laa=4.9900e-04 ; J=4.1300e-06 ; Ra=20  ; B=0 ; Ki=16.52  ; Km=(1/16.52);
+Va=accion;
+TL = TL;
+ h = h;
+
+omega= xant(1);
+wp= xant(2);
+ia=xant(3);
+tita=xant(4);
+
+%Ahora aplico Euler para ir creando mi simulacion
+for i=1 : h/h
+wpp =(-wp*(Ra*J+Laa*B)-omega*(Ra*B+Ki*Km)+Va*Ki)/(J*Laa);
+iap=((-Ra*ia)-(Km*omega)+(Va))/Laa;
+wp=wp+h*wpp;
+wp=wp-(1/J)*TL; %A la veloc angular le resto una fraccion del torque
+ia=ia+(iap*h);
+omega = omega + h*wp;
+tita=tita+(h*omega);
+end
+X=[omega,wp,ia,tita];
+end
+
+
 %__________________________________________________________________________
 %CONCLUSIONES:
 %En la figura 6 y 7 donde compruebo la forma de la velocidad angular y de la
@@ -288,3 +285,7 @@ title('Corriente DEL Excel');
 %Al comparar el grafico de mi modelo obtenido con CHEN Vs los datos de
 %excel veo que sus alturas difieren en un factor constante, debo ajustar
 %algunos parametros, pero la forma me da muy parecidos
+
+%Al torque tuve que ponerle un valor un poco mayor que en la consigna, de
+%7e-3 para obtener una veloc angular y una corriente casi igual a las
+%mostradas en las graficas de excel
