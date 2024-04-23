@@ -205,18 +205,31 @@ Km = 1/Ki
 
 X = -[0; 0 ;0 ;0];
 i=0;
-h=1e-6; % tamaño de paso par aplicar Euler
+h=1e-7; % tamaño de paso par aplicar Euler
 
-tF=0.6; % tiempo total de la simulacion
+tF=0.3; % tiempo total de la simulacion
 
 %u = fuente; % Entrada y es constante
 Ts = h;
 
 for t = 0 : h : tF
-i=i+1 ; 
-
-u = fuente*heaviside(t-0.035);
-torque = 7e-3*heaviside(t-0.18690);
+i=i+1 ;
+%__________________________________________
+if t<=0.035
+    u=0;
+    else
+    u=fuente;
+end
+    
+%u = fuente*heaviside(t-0.035);
+ %_________________________________________
+if t<=0.18690
+    torque=0;
+    else
+    torque=7e-3;
+end
+%torque = 7e-3*heaviside(t-0.18690);
+%____________________________________________
 
 X = modmotor(h, X, u , torque); %Declaro las 4 variables que recibira mi vector X
 
@@ -230,19 +243,18 @@ end
 t = 0 : h : tF ;
 
 figure(5)
-subplot(4,1,1);hold on;
+subplot(2,1,1);hold on;
 plot(t,x1,'g');title('Veloc angular');
 
-subplot(4,1,2);hold on;
-plot(t,torque,'r');title('torque');
+%subplot(4,1,2);hold on;
+%plot(t,x4,'r');title('thita');
 
-subplot(4,1,3);hold on;
+subplot(2,1,2);hold on;
 plot(t,x3,'b');title('Corriente');
 
-subplot(4,1,4);hold on;
-plot(t,acc,'k');title('Fuente de 12V');
+%subplot(4,1,4);hold on;
+%plot(t,acc,'k');title('Fuente de 12V');
 
-xlabel('Tiempo [Seg.]');
 
 function [X] = modmotor(h, xant, accion , TL)%Lo saco de la filmina de clase 1 del profe
 %Empleo mis valores de mi motor calculado, osea de mi modelo
@@ -251,10 +263,10 @@ Va=accion;
 TL = TL;
  h = h;
 
-omega= xant(1);
-wp= xant(2);
-ia=xant(3);
-tita=xant(4);
+omega = xant(1);
+  wp  = xant(2);
+  ia  = xant(3);
+ tita = xant(4);
 
 %Ahora aplico Euler para ir creando mi simulacion
 for i=1 : h/h
