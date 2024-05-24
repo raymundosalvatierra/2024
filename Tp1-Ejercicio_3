@@ -34,9 +34,9 @@ tp=0.0001
 %____________________________________________________________________________
 %Ahora voy a importar los datos de la corriente desde la tabla excel
 valores = xlsread('Curvas_Medidas_RLC_2024.xls'); % Importo la tabla de valores
-tt = valores(501:end,1); %Eje del tiempo
-I  = valores(501:end,2); %Valores de corriente
-u =  valores(501:end,4); %Tension de entrada
+tt = valores(1:end,1); %Eje del tiempo
+I  = valores(1:end,2); %Valores de corriente
+u =  valores(1:end,4); %Tension de entrada
 
 %Notar que en en la columna del tiempo, corriente y la tension de entrada
 %estoy tomando los valores a partir del instante 0.05segundos en adelante
@@ -51,7 +51,7 @@ Xop=[ 0    0]'; % punto de operacion, en este caso es el origen
 
 ii=0;
 %vin = 12;
-for i=1:1500
+for i=1:2000
     ii = ii+tp;
             
     %Ahora planteo las variables de estado del sistema lineal
